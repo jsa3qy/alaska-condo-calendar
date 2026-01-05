@@ -13,9 +13,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log('Auth: Getting session...')
     // Get initial session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
+        console.log('Auth: Session result:', session ? 'logged in' : 'no session')
         setUser(session?.user ?? null)
         if (session?.user) {
           fetchProfile(session.user.id)

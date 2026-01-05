@@ -39,6 +39,7 @@ function AppContent() {
   const fetchData = async () => {
     try {
       setLoading(true)
+      console.log('Fetching data...')
 
       // Fetch visitors
       const { data: visitorsData, error: visitorsError } = await supabase
@@ -46,6 +47,7 @@ function AppContent() {
         .select('*')
         .order('name')
 
+      console.log('Visitors result:', { data: visitorsData, error: visitorsError })
       if (visitorsError) throw visitorsError
 
       // Assign colors to visitors
