@@ -37,31 +37,23 @@ function AppContent() {
   }, [])
 
   const fetchData = async () => {
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const headers = {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    }
+
     try {
       setLoading(true)
-      console.log('Fetching data...')
+      console.log('Fetching data via direct API...')
 
-      // Test direct fetch first
-      const testUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/visitors?select=*`
-      console.log('Direct fetch to:', testUrl)
-      const directResponse = await fetch(testUrl, {
-        headers: {
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        }
-      })
-      const directData = await directResponse.json()
-      console.log('Direct fetch result:', directData)
-
-      // Fetch visitors via client
-      console.log('Now trying Supabase client...')
-      const { data: visitorsData, error: visitorsError } = await supabase
-        .from('visitors')
-        .select('*')
-        .order('name')
-
-      console.log('Visitors result:', { data: visitorsData, error: visitorsError })
-      if (visitorsError) throw visitorsError
+      // Fetch visitors
+      const visitorsRes = await fetch(`${SUPABASE_URL}/rest/v1/visitors?select=*&order=name`, { headers })
+      if (!visitorsRes.ok) throw new Error(`Visitors fetch failed: ${visitorsRes.status}`)
+      const visitorsData = await visitorsRes.json()
+      console.log('Visitors:', visitorsData)
 
       // Assign colors to visitors
       const visitorsWithColors = (visitorsData || []).map((visitor, idx) => ({
@@ -72,19 +64,10 @@ function AppContent() {
       setVisitors(visitorsWithColors)
 
       // Fetch visits with visitor info
-      const { data: visitsData, error: visitsError } = await supabase
-        .from('visits')
-        .select(`
-          *,
-          visitors (
-            id,
-            name,
-            description
-          )
-        `)
-        .order('start_date')
-
-      if (visitsError) throw visitsError
+      const visitsRes = await fetch(`${SUPABASE_URL}/rest/v1/visits?select=*,visitors(id,name,description)&order=start_date`, { headers })
+      if (!visitsRes.ok) throw new Error(`Visits fetch failed: ${visitsRes.status}`)
+      const visitsData = await visitsRes.json()
+      console.log('Visits:', visitsData)
 
       // Map visits with visitor colors
       const visitsWithColors = (visitsData || []).map(visit => {
