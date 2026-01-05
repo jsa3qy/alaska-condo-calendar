@@ -112,10 +112,12 @@ function AppContent() {
   // Count pending visits for admin badge
   const pendingCount = visits.filter(v => v.status === 'pending').length
 
+  console.log('Render state:', { loading, authLoading })
+
   if (loading || authLoading) {
     return (
       <div className="app">
-        <div className="loading">Loading calendar...</div>
+        <div className="loading">Loading calendar... (data: {loading ? 'loading' : 'done'}, auth: {authLoading ? 'loading' : 'done'})</div>
       </div>
     )
   }
