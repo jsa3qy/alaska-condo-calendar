@@ -41,7 +41,20 @@ function AppContent() {
       setLoading(true)
       console.log('Fetching data...')
 
-      // Fetch visitors
+      // Test direct fetch first
+      const testUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/visitors?select=*`
+      console.log('Direct fetch to:', testUrl)
+      const directResponse = await fetch(testUrl, {
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        }
+      })
+      const directData = await directResponse.json()
+      console.log('Direct fetch result:', directData)
+
+      // Fetch visitors via client
+      console.log('Now trying Supabase client...')
       const { data: visitorsData, error: visitorsError } = await supabase
         .from('visitors')
         .select('*')
