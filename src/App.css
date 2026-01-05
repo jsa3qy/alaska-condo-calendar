@@ -171,14 +171,9 @@ main {
 }
 
 .legend-color.pending {
-  background: repeating-linear-gradient(
-    -45deg,
-    #3b82f6,
-    #3b82f6 3px,
-    rgba(255, 255, 255, 0.4) 3px,
-    rgba(255, 255, 255, 0.4) 6px
-  );
-  opacity: 0.75;
+  background: #3b82f6;
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  opacity: 0.85;
 }
 
 .legend-color.denied {

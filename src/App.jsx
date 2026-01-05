@@ -116,8 +116,8 @@ function AppContent() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-title">
-            <h1>Alaska Condo Calendar</h1>
-            <p>View upcoming visits and reservations</p>
+            <h1>4503 Visitors Calendar</h1>
+            <p>View upcoming visits to Jesse and Paul's</p>
           </div>
 
           <div className="header-actions">
