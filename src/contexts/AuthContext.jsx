@@ -15,19 +15,59 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Check for stored session on mount
-    const storedSession = localStorage.getItem('supabase_session')
-    if (storedSession) {
-      try {
-        const session = JSON.parse(storedSession)
-        if (session.user && session.access_token) {
-          setUser(session.user)
-          fetchProfile(session.user.id, session.access_token)
+    async function initAuth() {
+      // Check for email confirmation tokens in URL hash
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+
+      if (accessToken && refreshToken) {
+        // Get user info from the token
+        try {
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${accessToken}`
+            }
+          })
+          const userData = await res.json()
+
+          if (userData && userData.id) {
+            // Store session
+            const session = {
+              user: userData,
+              access_token: accessToken,
+              refresh_token: refreshToken
+            }
+            localStorage.setItem('supabase_session', JSON.stringify(session))
+            setUser(userData)
+            fetchProfile(userData.id, accessToken)
+
+            // Clear the hash from URL
+            history.replaceState(null, '', window.location.pathname + window.location.search)
+            return
+          }
+        } catch (e) {
+          console.error('Error processing auth tokens:', e)
         }
-      } catch (e) {
-        localStorage.removeItem('supabase_session')
+      }
+
+      // Check for stored session
+      const storedSession = localStorage.getItem('supabase_session')
+      if (storedSession) {
+        try {
+          const session = JSON.parse(storedSession)
+          if (session.user && session.access_token) {
+            setUser(session.user)
+            fetchProfile(session.user.id, session.access_token)
+          }
+        } catch (e) {
+          localStorage.removeItem('supabase_session')
+        }
       }
     }
+
+    initAuth()
   }, [])
 
   async function fetchProfile(userId, accessToken) {
