@@ -41,12 +41,16 @@ function MyVisits({ onClose, onUpdate }) {
     }
   }
 
-  async function handleCancel(visitId) {
-    if (!confirm('Are you sure you want to cancel this proposal?')) return
+  async function handleCancel(visitId, status) {
+    const message = status === 'confirmed'
+      ? 'Are you sure you want to cancel this confirmed visit?'
+      : 'Are you sure you want to cancel this proposal?'
+
+    if (!confirm(message)) return
 
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}&submitted_by=eq.${user.id}&status=eq.pending`,
+        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}&submitted_by=eq.${user.id}`,
         {
           method: 'DELETE',
           headers: getHeaders()
@@ -118,10 +122,10 @@ function MyVisits({ onClose, onUpdate }) {
                     <span className={`status-badge ${badge.className}`}>
                       {badge.label}
                     </span>
-                    {visit.status === 'pending' && (
+                    {visit.status !== 'denied' && (
                       <button
                         className="cancel-btn"
-                        onClick={() => handleCancel(visit.id)}
+                        onClick={() => handleCancel(visit.id, visit.status)}
                       >
                         Cancel
                       </button>
