@@ -9,14 +9,12 @@ function Auth({ onClose }) {
   const [name, setName] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState(null)
 
   const { signIn, signUp } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
-    setMessage(null)
     setLoading(true)
 
     try {
@@ -27,7 +25,7 @@ function Auth({ onClose }) {
       } else {
         const { error } = await signUp(email, password, name)
         if (error) throw error
-        setMessage('Check your email to confirm your account!')
+        onClose?.()
       }
     } catch (err) {
       setError(err.message)
@@ -89,7 +87,6 @@ function Auth({ onClose }) {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
-          {message && <div className="auth-success">{message}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Sign Up'}

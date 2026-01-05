@@ -15,59 +15,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    async function initAuth() {
-      // Check for email confirmation tokens in URL hash
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const accessToken = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
-
-      if (accessToken && refreshToken) {
-        // Get user info from the token
-        try {
-          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${accessToken}`
-            }
-          })
-          const userData = await res.json()
-
-          if (userData && userData.id) {
-            // Store session
-            const session = {
-              user: userData,
-              access_token: accessToken,
-              refresh_token: refreshToken
-            }
-            localStorage.setItem('supabase_session', JSON.stringify(session))
-            setUser(userData)
-            fetchProfile(userData.id, accessToken)
-
-            // Clear the hash from URL
-            history.replaceState(null, '', window.location.pathname + window.location.search)
-            return
-          }
-        } catch (e) {
-          console.error('Error processing auth tokens:', e)
+    // Check for stored session on mount
+    const storedSession = localStorage.getItem('supabase_session')
+    if (storedSession) {
+      try {
+        const session = JSON.parse(storedSession)
+        if (session.user && session.access_token) {
+          setUser(session.user)
+          fetchProfile(session.user.id, session.access_token)
         }
-      }
-
-      // Check for stored session
-      const storedSession = localStorage.getItem('supabase_session')
-      if (storedSession) {
-        try {
-          const session = JSON.parse(storedSession)
-          if (session.user && session.access_token) {
-            setUser(session.user)
-            fetchProfile(session.user.id, session.access_token)
-          }
-        } catch (e) {
-          localStorage.removeItem('supabase_session')
-        }
+      } catch (e) {
+        localStorage.removeItem('supabase_session')
       }
     }
-
-    initAuth()
   }, [])
 
   async function fetchProfile(userId, accessToken) {
@@ -92,9 +52,7 @@ export function AuthProvider({ children }) {
 
   async function signUp(email, password, name) {
     try {
-      // Build redirect URL for email confirmation
-      const redirectUrl = window.location.origin + window.location.pathname
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`, {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,
@@ -110,6 +68,21 @@ export function AuthProvider({ children }) {
       if (data.error) {
         return { data: null, error: data.error }
       }
+
+      // If email confirmation is disabled, we get a session immediately
+      if (data.access_token && data.user) {
+        const session = {
+          user: data.user,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        }
+        localStorage.setItem('supabase_session', JSON.stringify(session))
+        setUser(data.user)
+        if (data.user) {
+          await fetchProfile(data.user.id, data.access_token)
+        }
+      }
+
       return { data, error: null }
     } catch (error) {
       return { data: null, error: { message: error.message } }
