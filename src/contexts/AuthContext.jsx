@@ -14,18 +14,14 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Try to get session but don't block rendering
-    console.log('Auth: Checking session in background...')
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        console.log('Auth: Session result:', session ? 'logged in' : 'no session')
         setUser(session?.user ?? null)
         if (session?.user) {
           fetchProfile(session.user.id)
         }
       })
-      .catch((error) => {
-        console.error('Auth session error:', error)
-      })
+      .catch(() => {})
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

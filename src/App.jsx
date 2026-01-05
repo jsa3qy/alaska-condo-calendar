@@ -47,13 +47,10 @@ function AppContent() {
 
     try {
       setLoading(true)
-      console.log('Fetching data via direct API...')
-
       // Fetch visitors
       const visitorsRes = await fetch(`${SUPABASE_URL}/rest/v1/visitors?select=*&order=name`, { headers })
       if (!visitorsRes.ok) throw new Error(`Visitors fetch failed: ${visitorsRes.status}`)
       const visitorsData = await visitorsRes.json()
-      console.log('Visitors:', visitorsData)
 
       // Assign colors to visitors
       const visitorsWithColors = (visitorsData || []).map((visitor, idx) => ({
@@ -67,7 +64,6 @@ function AppContent() {
       const visitsRes = await fetch(`${SUPABASE_URL}/rest/v1/visits?select=*,visitors(id,name,description)&order=start_date`, { headers })
       if (!visitsRes.ok) throw new Error(`Visits fetch failed: ${visitsRes.status}`)
       const visitsData = await visitsRes.json()
-      console.log('Visits:', visitsData)
 
       // Map visits with visitor colors
       const visitsWithColors = (visitsData || []).map(visit => {
@@ -95,12 +91,10 @@ function AppContent() {
   // Count pending visits for admin badge
   const pendingCount = visits.filter(v => v.status === 'pending').length
 
-  console.log('Render state:', { loading, authLoading })
-
-  if (loading || authLoading) {
+  if (loading) {
     return (
       <div className="app">
-        <div className="loading">Loading calendar... (data: {loading ? 'loading' : 'done'}, auth: {authLoading ? 'loading' : 'done'})</div>
+        <div className="loading">Loading calendar...</div>
       </div>
     )
   }
