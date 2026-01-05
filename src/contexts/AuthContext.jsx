@@ -92,7 +92,9 @@ export function AuthProvider({ children }) {
 
   async function signUp(email, password, name) {
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      // Build redirect URL for email confirmation
+      const redirectUrl = window.location.origin + window.location.pathname
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,
