@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export function useAuth() {
   return useContext(AuthContext)
@@ -10,93 +12,170 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(false) // Start as false - don't block on auth
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Try to get session but don't block rendering
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          fetchProfile(session.user.id)
+    // Check for stored session on mount
+    const storedSession = localStorage.getItem('supabase_session')
+    if (storedSession) {
+      try {
+        const session = JSON.parse(storedSession)
+        if (session.user && session.access_token) {
+          setUser(session.user)
+          fetchProfile(session.user.id, session.access_token)
         }
-      })
-      .catch(() => {})
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
+      } catch (e) {
+        localStorage.removeItem('supabase_session')
       }
-    )
-
-    return () => subscription.unsubscribe()
+    }
   }, [])
 
-  async function fetchProfile(userId) {
+  async function fetchProfile(userId, accessToken) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-      setProfile(data)
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`,
+        {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      )
+      const data = await res.json()
+      if (data && data[0]) {
+        setProfile(data[0])
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
   async function signUp(email, password, name) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          data: { name }
+        })
+      })
+      const data = await res.json()
+      if (data.error) {
+        return { data: null, error: data.error }
       }
-    })
-    return { data, error }
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error: { message: error.message } }
+    }
   }
 
   async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-    return { data, error }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      })
+      const data = await res.json()
+
+      if (data.error || data.error_description) {
+        return { data: null, error: { message: data.error_description || data.error } }
+      }
+
+      // Store session
+      const session = {
+        user: data.user,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token
+      }
+      localStorage.setItem('supabase_session', JSON.stringify(session))
+
+      setUser(data.user)
+      if (data.user) {
+        await fetchProfile(data.user.id, data.access_token)
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error: { message: error.message } }
+    }
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (!error) {
+    try {
+      const storedSession = localStorage.getItem('supabase_session')
+      if (storedSession) {
+        const session = JSON.parse(storedSession)
+        // Call logout endpoint
+        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }).catch(() => {}) // Ignore errors
+      }
+    } finally {
+      // Always clear local state
+      localStorage.removeItem('supabase_session')
       setUser(null)
       setProfile(null)
     }
-    return { error }
+    return { error: null }
   }
 
   async function updateProfile(updates) {
     if (!user) return { error: { message: 'Not logged in' } }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
-      .select()
-      .single()
+    const storedSession = localStorage.getItem('supabase_session')
+    if (!storedSession) return { error: { message: 'No session' } }
 
-    if (!error && data) {
-      setProfile(data)
+    try {
+      const session = JSON.parse(storedSession)
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(updates)
+        }
+      )
+      const data = await res.json()
+      if (data && data[0]) {
+        setProfile(data[0])
+        return { data: data[0], error: null }
+      }
+      return { data: null, error: { message: 'Update failed' } }
+    } catch (error) {
+      return { data: null, error: { message: error.message } }
     }
-    return { data, error }
+  }
+
+  // Get current access token for API calls
+  function getAccessToken() {
+    const storedSession = localStorage.getItem('supabase_session')
+    if (storedSession) {
+      try {
+        const session = JSON.parse(storedSession)
+        return session.access_token
+      } catch (e) {
+        return null
+      }
+    }
+    return null
   }
 
   const value = {
@@ -108,7 +187,11 @@ export function AuthProvider({ children }) {
     signIn,
     signOut,
     updateProfile,
-    refreshProfile: () => user && fetchProfile(user.id)
+    getAccessToken,
+    refreshProfile: () => {
+      const token = getAccessToken()
+      if (user && token) fetchProfile(user.id, token)
+    }
   }
 
   return (
