@@ -138,6 +138,31 @@
   color: white;
   overflow: hidden;
   white-space: nowrap;
+  background-color: var(--visit-color);
+}
+
+/* Confirmed visits - solid color */
+.visit-bar.visit-confirmed {
+  opacity: 1;
+}
+
+/* Pending visits - striped pattern with fade */
+.visit-bar.visit-pending {
+  opacity: 0.75;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--visit-color),
+    var(--visit-color) 4px,
+    rgba(255, 255, 255, 0.3) 4px,
+    rgba(255, 255, 255, 0.3) 8px
+  );
+}
+
+/* Denied visits - faded gray */
+.visit-bar.visit-denied {
+  opacity: 0.4;
+  background-color: #94a3b8;
+  text-decoration: line-through;
 }
 
 .visit-bar.visit-start {

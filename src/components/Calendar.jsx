@@ -95,12 +95,13 @@ function Calendar({ visits = [] }) {
             <div className="visits-container">
               {dayVisits.map((visit, idx) => {
                 const { isStart, isEnd } = getVisitPosition(visit, currentDay)
+                const statusClass = visit.status ? `visit-${visit.status}` : 'visit-confirmed'
                 return (
                   <div
                     key={visit.id || idx}
-                    className={`visit-bar ${isStart ? 'visit-start' : ''} ${isEnd ? 'visit-end' : ''}`}
-                    style={{ backgroundColor: visit.color }}
-                    title={`${visit.visitor_name}${visit.notes ? `: ${visit.notes}` : ''}`}
+                    className={`visit-bar ${isStart ? 'visit-start' : ''} ${isEnd ? 'visit-end' : ''} ${statusClass}`}
+                    style={{ '--visit-color': visit.color }}
+                    title={`${visit.visitor_name}${visit.status === 'pending' ? ' (Pending)' : ''}${visit.notes ? `: ${visit.notes}` : ''}`}
                   >
                     {isStart && (
                       <span className="visit-label">

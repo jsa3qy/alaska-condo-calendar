@@ -1,0 +1,167 @@
+.admin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.admin-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.admin-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.admin-close:hover {
+  color: #334155;
+}
+
+.admin-modal h2 {
+  margin: 0 0 0.5rem;
+  color: #1e293b;
+  font-size: 1.5rem;
+}
+
+.admin-subtitle {
+  margin: 0 0 1.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.no-pending {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pending-card {
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fffbeb;
+}
+
+.pending-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.submitter-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.submitter-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.submitter-email {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.submitted-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.pending-dates {
+  margin-bottom: 0.5rem;
+}
+
+.date-range {
+  font-weight: 500;
+  color: #334155;
+}
+
+.pending-times {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.pending-notes {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+  padding: 0.5rem 0;
+  border-top: 1px solid #fef3c7;
+}
+
+.pending-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #fef3c7;
+}
+
+.approve-btn,
+.deny-btn {
+  flex: 1;
+  padding: 0.625rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.approve-btn {
+  background: #16a34a;
+  color: white;
+  border: none;
+}
+
+.approve-btn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.deny-btn {
+  background: white;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.deny-btn:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.approve-btn:disabled,
+.deny-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
