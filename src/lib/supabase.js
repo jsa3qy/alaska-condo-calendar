@@ -8,7 +8,13 @@ console.log('Supabase config:', {
   keySet: supabaseAnonKey ? 'yes' : 'MISSING'
 })
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
-)
+// Test if we can reach Supabase at all
+if (supabaseUrl) {
+  fetch(`${supabaseUrl}/rest/v1/`, {
+    headers: { 'apikey': supabaseAnonKey }
+  })
+    .then(r => console.log('Supabase reachable:', r.status))
+    .catch(e => console.error('Supabase unreachable:', e))
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
