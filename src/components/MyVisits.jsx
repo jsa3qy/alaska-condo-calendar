@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import './MyVisits.css'
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 function MyVisits({ onClose, onUpdate }) {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const [visits, setVisits] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const getHeaders = () => {
+    const token = getAccessToken()
+    return {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
 
   useEffect(() => {
     fetchMyVisits()
@@ -17,13 +28,11 @@ function MyVisits({ onClose, onUpdate }) {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('visits')
-        .select('*')
-        .eq('submitted_by', user.id)
-        .order('start_date', { ascending: true })
-
-      if (error) throw error
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?submitted_by=eq.${user.id}&select=*&order=start_date.asc`,
+        { headers: getHeaders() }
+      )
+      const data = await res.json()
       setVisits(data || [])
     } catch (err) {
       console.error('Error fetching visits:', err)
@@ -36,14 +45,17 @@ function MyVisits({ onClose, onUpdate }) {
     if (!confirm('Are you sure you want to cancel this proposal?')) return
 
     try {
-      const { error } = await supabase
-        .from('visits')
-        .delete()
-        .eq('id', visitId)
-        .eq('submitted_by', user.id)
-        .eq('status', 'pending')
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}&submitted_by=eq.${user.id}&status=eq.pending`,
+        {
+          method: 'DELETE',
+          headers: getHeaders()
+        }
+      )
 
-      if (error) throw error
+      if (!res.ok) {
+        throw new Error('Failed to cancel visit')
+      }
 
       setVisits(visits.filter(v => v.id !== visitId))
       onUpdate?.()

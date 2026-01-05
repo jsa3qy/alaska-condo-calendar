@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import './ProposalForm.css'
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 function ProposalForm({ onClose, onSubmitted }) {
-  const { user, profile } = useAuth()
+  const { user, profile, getAccessToken } = useAuth()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [arrivalTime, setArrivalTime] = useState('')
@@ -13,43 +15,60 @@ function ProposalForm({ onClose, onSubmitted }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const getHeaders = () => {
+    const token = getAccessToken()
+    return {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      // First, find or create a visitor record for this user
+      const headers = getHeaders()
       let visitorId
 
-      const { data: existingVisitor } = await supabase
-        .from('visitors')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
+      // First, find existing visitor record for this user
+      const existingRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/visitors?user_id=eq.${user.id}&select=id`,
+        { headers }
+      )
+      const existingVisitors = await existingRes.json()
 
-      if (existingVisitor) {
-        visitorId = existingVisitor.id
+      if (existingVisitors && existingVisitors.length > 0) {
+        visitorId = existingVisitors[0].id
       } else {
         // Create new visitor linked to this user
-        const { data: newVisitor, error: visitorError } = await supabase
-          .from('visitors')
-          .insert({
+        const createRes = await fetch(`${SUPABASE_URL}/rest/v1/visitors`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
             user_id: user.id,
             name: profile?.name || user.email.split('@')[0],
             description: 'Registered user'
           })
-          .select('id')
-          .single()
+        })
 
-        if (visitorError) throw visitorError
-        visitorId = newVisitor.id
+        if (!createRes.ok) {
+          const errData = await createRes.json()
+          throw new Error(errData.message || 'Failed to create visitor')
+        }
+
+        const newVisitors = await createRes.json()
+        visitorId = newVisitors[0].id
       }
 
       // Create the visit proposal
-      const { error: visitError } = await supabase
-        .from('visits')
-        .insert({
+      const visitRes = await fetch(`${SUPABASE_URL}/rest/v1/visits`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
           visitor_id: visitorId,
           submitted_by: user.id,
           start_date: startDate,
@@ -59,8 +78,12 @@ function ProposalForm({ onClose, onSubmitted }) {
           notes: notes || null,
           status: 'pending'
         })
+      })
 
-      if (visitError) throw visitError
+      if (!visitRes.ok) {
+        const errData = await visitRes.json()
+        throw new Error(errData.message || 'Failed to create visit')
+      }
 
       onSubmitted?.()
       onClose?.()

@@ -1,14 +1,26 @@
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import './AdminPanel.css'
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 function AdminPanel({ onClose, onUpdate }) {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const [pendingVisits, setPendingVisits] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
+
+  const getHeaders = () => {
+    const token = getAccessToken()
+    return {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  }
 
   useEffect(() => {
     fetchPendingVisits()
@@ -16,17 +28,11 @@ function AdminPanel({ onClose, onUpdate }) {
 
   async function fetchPendingVisits() {
     try {
-      const { data, error } = await supabase
-        .from('visits')
-        .select(`
-          *,
-          visitors (name),
-          profiles:submitted_by (email, name)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?status=eq.pending&select=*,visitors(name),profiles:submitted_by(email,name)&order=created_at.asc`,
+        { headers: getHeaders() }
+      )
+      const data = await res.json()
       setPendingVisits(data || [])
     } catch (err) {
       console.error('Error fetching pending visits:', err)
@@ -39,16 +45,22 @@ function AdminPanel({ onClose, onUpdate }) {
     setProcessing(visitId)
 
     try {
-      const { error } = await supabase
-        .from('visits')
-        .update({
-          status,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user.id
-        })
-        .eq('id', visitId)
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}`,
+        {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            status,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id
+          })
+        }
+      )
 
-      if (error) throw error
+      if (!res.ok) {
+        throw new Error('Failed to update visit')
+      }
 
       setPendingVisits(pendingVisits.filter(v => v.id !== visitId))
       onUpdate?.()
