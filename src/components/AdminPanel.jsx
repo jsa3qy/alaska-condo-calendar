@@ -13,6 +13,15 @@ function AdminPanel({ onClose, onUpdate }) {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
   const [activeTab, setActiveTab] = useState('pending')
+  const [editingVisit, setEditingVisit] = useState(null)
+  const [editForm, setEditForm] = useState({
+    start_date: '',
+    end_date: '',
+    arrival_time: '',
+    departure_time: '',
+    notes: '',
+    status: ''
+  })
 
   const getHeaders = () => {
     const token = getAccessToken()
@@ -114,6 +123,88 @@ function AdminPanel({ onClose, onUpdate }) {
     }
   }
 
+  function handleEdit(visit) {
+    setEditingVisit(visit.id)
+    setEditForm({
+      start_date: visit.start_date,
+      end_date: visit.end_date,
+      arrival_time: visit.arrival_time || '',
+      departure_time: visit.departure_time || '',
+      notes: visit.notes || '',
+      status: visit.status
+    })
+  }
+
+  function handleCancelEdit() {
+    setEditingVisit(null)
+    setEditForm({
+      start_date: '',
+      end_date: '',
+      arrival_time: '',
+      departure_time: '',
+      notes: '',
+      status: ''
+    })
+  }
+
+  async function handleSaveEdit(visitId) {
+    setProcessing(visitId)
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}`,
+        {
+          method: 'PATCH',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            start_date: editForm.start_date,
+            end_date: editForm.end_date,
+            arrival_time: editForm.arrival_time || null,
+            departure_time: editForm.departure_time || null,
+            notes: editForm.notes || null,
+            status: editForm.status
+          })
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error('Failed to update visit')
+      }
+
+      // Update local state
+      const updateVisit = (visit) =>
+        visit.id === visitId
+          ? { ...visit, ...editForm, arrival_time: editForm.arrival_time || null, departure_time: editForm.departure_time || null, notes: editForm.notes || null }
+          : visit
+
+      setPendingVisits(pendingVisits.map(updateVisit))
+      setAllVisits(allVisits.map(updateVisit))
+
+      // If status changed, move between lists
+      if (editForm.status === 'pending') {
+        const updated = [...pendingVisits, ...allVisits].find(v => v.id === visitId)
+        if (updated) {
+          setPendingVisits(prev => prev.some(v => v.id === visitId) ? prev.map(updateVisit) : [...prev, updateVisit(updated)])
+          setAllVisits(prev => prev.filter(v => v.id !== visitId))
+        }
+      } else {
+        const updated = [...pendingVisits, ...allVisits].find(v => v.id === visitId)
+        if (updated) {
+          setAllVisits(prev => prev.some(v => v.id === visitId) ? prev.map(updateVisit) : [...prev, updateVisit(updated)])
+          setPendingVisits(prev => prev.filter(v => v.id !== visitId))
+        }
+      }
+
+      handleCancelEdit()
+      onUpdate?.()
+    } catch (err) {
+      console.error('Error updating visit:', err)
+      alert('Could not update visit. ' + err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   const formatDate = (dateStr) => format(parseISO(dateStr), 'MMM d, yyyy')
   const formatTime = (timeStr) => {
     if (!timeStr) return null
@@ -142,6 +233,94 @@ function AdminPanel({ onClose, onUpdate }) {
     }
     return badges[status] || badges.pending
   }
+
+  const renderEditForm = (visit) => (
+    <div className="pending-card editing">
+      <div className="edit-form">
+        <div className="edit-header">
+          <span className="submitter-name">{visit.visitors?.name || 'Unknown'}</span>
+          <span className="submitter-email">{visit.profiles?.email}</span>
+        </div>
+
+        <div className="edit-row">
+          <div className="edit-field">
+            <label>Start Date</label>
+            <input
+              type="date"
+              value={editForm.start_date}
+              onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+            />
+          </div>
+          <div className="edit-field">
+            <label>End Date</label>
+            <input
+              type="date"
+              value={editForm.end_date}
+              onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
+              min={editForm.start_date}
+            />
+          </div>
+        </div>
+
+        <div className="edit-row">
+          <div className="edit-field">
+            <label>Arrival Time</label>
+            <input
+              type="time"
+              value={editForm.arrival_time}
+              onChange={(e) => setEditForm({ ...editForm, arrival_time: e.target.value })}
+            />
+          </div>
+          <div className="edit-field">
+            <label>Departure Time</label>
+            <input
+              type="time"
+              value={editForm.departure_time}
+              onChange={(e) => setEditForm({ ...editForm, departure_time: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="edit-field">
+          <label>Status</label>
+          <select
+            value={editForm.status}
+            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+          >
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="denied">Denied</option>
+          </select>
+        </div>
+
+        <div className="edit-field">
+          <label>Notes</label>
+          <textarea
+            value={editForm.notes}
+            onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+            rows={2}
+          />
+        </div>
+
+        <div className="edit-actions">
+          <button
+            className="cancel-edit-btn"
+            onClick={handleCancelEdit}
+            disabled={processing === visit.id}
+          >
+            Cancel
+          </button>
+          <button
+            className="save-btn"
+            onClick={() => handleSaveEdit(visit.id)}
+            disabled={processing === visit.id}
+          >
+            {processing === visit.id ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="admin-overlay" onClick={onClose}>
@@ -174,59 +353,70 @@ function AdminPanel({ onClose, onUpdate }) {
             ) : (
               <div className="pending-list">
                 {pendingVisits.map(visit => (
-                  <div key={visit.id} className="pending-card">
-                    <div className="pending-header">
-                      <div className="submitter-info">
-                        <span className="submitter-name">
-                          {visit.visitors?.name || 'Unknown'}
-                        </span>
-                        <span className="submitter-email">
-                          {visit.profiles?.email}
+                  editingVisit === visit.id ? (
+                    <div key={visit.id}>{renderEditForm(visit)}</div>
+                  ) : (
+                    <div key={visit.id} className="pending-card">
+                      <div className="pending-header">
+                        <div className="submitter-info">
+                          <span className="submitter-name">
+                            {visit.visitors?.name || 'Unknown'}
+                          </span>
+                          <span className="submitter-email">
+                            {visit.profiles?.email}
+                          </span>
+                        </div>
+                        <span className="submitted-date">
+                          Submitted {format(parseISO(visit.created_at), 'MMM d')}
                         </span>
                       </div>
-                      <span className="submitted-date">
-                        Submitted {format(parseISO(visit.created_at), 'MMM d')}
-                      </span>
-                    </div>
 
-                    <div className="pending-dates">
-                      <span className="date-range">
-                        {formatDate(visit.start_date)} - {formatDate(visit.end_date)}
-                      </span>
-                    </div>
-
-                    {(visit.arrival_time || visit.departure_time) && (
-                      <div className="pending-times">
-                        {visit.arrival_time && (
-                          <span>Arrive: {formatTime(visit.arrival_time)}</span>
-                        )}
-                        {visit.departure_time && (
-                          <span>Depart: {formatTime(visit.departure_time)}</span>
-                        )}
+                      <div className="pending-dates">
+                        <span className="date-range">
+                          {formatDate(visit.start_date)} - {formatDate(visit.end_date)}
+                        </span>
                       </div>
-                    )}
 
-                    {visit.notes && (
-                      <div className="pending-notes">{visit.notes}</div>
-                    )}
+                      {(visit.arrival_time || visit.departure_time) && (
+                        <div className="pending-times">
+                          {visit.arrival_time && (
+                            <span>Arrive: {formatTime(visit.arrival_time)}</span>
+                          )}
+                          {visit.departure_time && (
+                            <span>Depart: {formatTime(visit.departure_time)}</span>
+                          )}
+                        </div>
+                      )}
 
-                    <div className="pending-actions">
-                      <button
-                        className="deny-btn"
-                        onClick={() => handleDecision(visit.id, 'denied')}
-                        disabled={processing === visit.id}
-                      >
-                        Deny
-                      </button>
-                      <button
-                        className="approve-btn"
-                        onClick={() => handleDecision(visit.id, 'confirmed')}
-                        disabled={processing === visit.id}
-                      >
-                        Approve
-                      </button>
+                      {visit.notes && (
+                        <div className="pending-notes">{visit.notes}</div>
+                      )}
+
+                      <div className="pending-actions">
+                        <button
+                          className="edit-btn"
+                          onClick={() => handleEdit(visit)}
+                          disabled={processing === visit.id}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="deny-btn"
+                          onClick={() => handleDecision(visit.id, 'denied')}
+                          disabled={processing === visit.id}
+                        >
+                          Deny
+                        </button>
+                        <button
+                          className="approve-btn"
+                          onClick={() => handleDecision(visit.id, 'confirmed')}
+                          disabled={processing === visit.id}
+                        >
+                          Approve
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))}
               </div>
             )}
@@ -242,6 +432,9 @@ function AdminPanel({ onClose, onUpdate }) {
             ) : (
               <div className="pending-list">
                 {allVisits.map(visit => {
+                  if (editingVisit === visit.id) {
+                    return <div key={visit.id}>{renderEditForm(visit)}</div>
+                  }
                   const badge = getStatusBadge(visit.status)
                   return (
                     <div key={visit.id} className="pending-card">
@@ -278,6 +471,13 @@ function AdminPanel({ onClose, onUpdate }) {
                       )}
 
                       <div className="pending-actions">
+                        <button
+                          className="edit-btn"
+                          onClick={() => handleEdit(visit)}
+                          disabled={processing === visit.id}
+                        >
+                          Edit
+                        </button>
                         <button
                           className="delete-btn"
                           onClick={() => handleDelete(visit.id)}

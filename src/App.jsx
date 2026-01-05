@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Calendar from './components/Calendar'
@@ -6,6 +6,15 @@ import Auth from './components/Auth'
 import ProposalForm from './components/ProposalForm'
 import MyVisits from './components/MyVisits'
 import AdminPanel from './components/AdminPanel'
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  parseISO,
+  isWithinInterval,
+  areIntervalsOverlapping
+} from 'date-fns'
 import './App.css'
 
 const VISITOR_COLORS = [
@@ -25,6 +34,7 @@ function AppContent() {
   const [visitors, setVisitors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   // Modal states
   const [showAuth, setShowAuth] = useState(false)
@@ -90,6 +100,32 @@ function AppContent() {
 
   // Count pending visits for admin badge
   const pendingCount = visits.filter(v => v.status === 'pending').length
+
+  // Filter visitors to only those with visits in the current calendar view
+  const visibleVisitors = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(currentMonth)
+    const viewStart = startOfWeek(monthStart)
+    const viewEnd = endOfWeek(monthEnd)
+
+    // Find visitor IDs that have non-denied visits overlapping with the current view
+    const visitorIdsInView = new Set(
+      visits
+        .filter(visit => {
+          if (visit.status === 'denied') return false
+          const visitStart = parseISO(visit.start_date)
+          const visitEnd = parseISO(visit.end_date)
+          return areIntervalsOverlapping(
+            { start: viewStart, end: viewEnd },
+            { start: visitStart, end: visitEnd },
+            { inclusive: true }
+          )
+        })
+        .map(visit => visit.visitor_id)
+    )
+
+    return visitors.filter(v => visitorIdsInView.has(v.id))
+  }, [visitors, visits, currentMonth])
 
   if (loading) {
     return (
@@ -159,14 +195,14 @@ function AppContent() {
       </header>
 
       <main>
-        <Calendar visits={visits} />
+        <Calendar visits={visits.filter(v => v.status !== 'denied')} currentMonth={currentMonth} onMonthChange={setCurrentMonth} />
 
         <div className="legend-section">
-          {visitors.length > 0 && (
+          {visibleVisitors.length > 0 && (
             <div className="legend">
               <h3>Visitors</h3>
               <div className="legend-items">
-                {visitors.map(visitor => (
+                {visibleVisitors.map(visitor => (
                   <div key={visitor.id} className="legend-item">
                     <span
                       className="legend-color"
@@ -192,10 +228,6 @@ function AppContent() {
               <div className="legend-item">
                 <span className="legend-color pending" />
                 <span className="legend-name">Pending Review</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color denied" />
-                <span className="legend-name">Denied</span>
               </div>
             </div>
           </div>

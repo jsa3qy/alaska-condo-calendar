@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   format,
   startOfMonth,
@@ -15,12 +14,10 @@ import {
 } from 'date-fns'
 import './Calendar.css'
 
-function Calendar({ visits = [] }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-
-  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
-  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
-  const goToToday = () => setCurrentMonth(new Date())
+function Calendar({ visits = [], currentMonth, onMonthChange }) {
+  const prevMonth = () => onMonthChange(subMonths(currentMonth, 1))
+  const nextMonth = () => onMonthChange(addMonths(currentMonth, 1))
+  const goToToday = () => onMonthChange(new Date())
 
   const renderHeader = () => (
     <div className="calendar-header">

@@ -231,3 +231,137 @@
   background: #fef3c7;
   color: #92400e;
 }
+
+/* Edit button */
+.edit-btn {
+  flex: 1;
+  padding: 0.625rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+  transition: background 0.2s;
+}
+
+.edit-btn:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Edit form styles */
+.pending-card.editing {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.edit-header {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.edit-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.edit-field input,
+.edit-field select,
+.edit-field textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: white;
+  color: #1e293b;
+}
+
+.edit-field input:focus,
+.edit-field select:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.edit-field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cancel-edit-btn {
+  flex: 1;
+  padding: 0.625rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  transition: background 0.2s;
+}
+
+.cancel-edit-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.save-btn {
+  flex: 1;
+  padding: 0.625rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  transition: background 0.2s;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.save-btn:disabled,
+.cancel-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
