@@ -9,8 +9,10 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 function AdminPanel({ onClose, onUpdate }) {
   const { user, getAccessToken } = useAuth()
   const [pendingVisits, setPendingVisits] = useState([])
+  const [allVisits, setAllVisits] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
+  const [activeTab, setActiveTab] = useState('pending')
 
   const getHeaders = () => {
     const token = getAccessToken()
@@ -23,19 +25,30 @@ function AdminPanel({ onClose, onUpdate }) {
   }
 
   useEffect(() => {
-    fetchPendingVisits()
+    fetchVisits()
   }, [])
 
-  async function fetchPendingVisits() {
+  async function fetchVisits() {
     try {
-      const res = await fetch(
+      const headers = getHeaders()
+
+      // Fetch pending visits
+      const pendingRes = await fetch(
         `${SUPABASE_URL}/rest/v1/visits?status=eq.pending&select=*,visitors(name),profiles:submitted_by(email,name)&order=created_at.asc`,
-        { headers: getHeaders() }
+        { headers }
       )
-      const data = await res.json()
-      setPendingVisits(data || [])
+      const pendingData = await pendingRes.json()
+      setPendingVisits(pendingData || [])
+
+      // Fetch all non-pending visits
+      const allRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?status=neq.pending&select=*,visitors(name),profiles:submitted_by(email,name)&order=start_date.desc`,
+        { headers }
+      )
+      const allData = await allRes.json()
+      setAllVisits(allData || [])
     } catch (err) {
-      console.error('Error fetching pending visits:', err)
+      console.error('Error fetching visits:', err)
     } finally {
       setLoading(false)
     }
@@ -72,6 +85,35 @@ function AdminPanel({ onClose, onUpdate }) {
     }
   }
 
+  async function handleDelete(visitId) {
+    if (!confirm('Are you sure you want to delete this visit?')) return
+
+    setProcessing(visitId)
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/visits?id=eq.${visitId}`,
+        {
+          method: 'DELETE',
+          headers: getHeaders()
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error('Failed to delete visit')
+      }
+
+      setPendingVisits(pendingVisits.filter(v => v.id !== visitId))
+      setAllVisits(allVisits.filter(v => v.id !== visitId))
+      onUpdate?.()
+    } catch (err) {
+      console.error('Error deleting visit:', err)
+      alert('Could not delete visit. ' + err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   const formatDate = (dateStr) => format(parseISO(dateStr), 'MMM d, yyyy')
   const formatTime = (timeStr) => {
     if (!timeStr) return null
@@ -92,78 +134,164 @@ function AdminPanel({ onClose, onUpdate }) {
     )
   }
 
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: { label: 'Pending', className: 'status-pending' },
+      confirmed: { label: 'Confirmed', className: 'status-confirmed' },
+      denied: { label: 'Denied', className: 'status-denied' }
+    }
+    return badges[status] || badges.pending
+  }
+
   return (
     <div className="admin-overlay" onClick={onClose}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <button className="admin-close" onClick={onClose}>&times;</button>
 
-        <h2>Pending Proposals</h2>
-        <p className="admin-subtitle">
-          Review and approve or deny visit requests
-        </p>
+        <h2>Manage Visits</h2>
 
-        {pendingVisits.length === 0 ? (
-          <div className="no-pending">
-            <p>No pending proposals to review.</p>
-          </div>
-        ) : (
-          <div className="pending-list">
-            {pendingVisits.map(visit => (
-              <div key={visit.id} className="pending-card">
-                <div className="pending-header">
-                  <div className="submitter-info">
-                    <span className="submitter-name">
-                      {visit.visitors?.name || 'Unknown'}
-                    </span>
-                    <span className="submitter-email">
-                      {visit.profiles?.email}
-                    </span>
-                  </div>
-                  <span className="submitted-date">
-                    Submitted {format(parseISO(visit.created_at), 'MMM d')}
-                  </span>
-                </div>
+        <div className="admin-tabs">
+          <button
+            className={`admin-tab ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            Pending ({pendingVisits.length})
+          </button>
+          <button
+            className={`admin-tab ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            All Visits ({allVisits.length})
+          </button>
+        </div>
 
-                <div className="pending-dates">
-                  <span className="date-range">
-                    {formatDate(visit.start_date)} - {formatDate(visit.end_date)}
-                  </span>
-                </div>
-
-                {(visit.arrival_time || visit.departure_time) && (
-                  <div className="pending-times">
-                    {visit.arrival_time && (
-                      <span>Arrive: {formatTime(visit.arrival_time)}</span>
-                    )}
-                    {visit.departure_time && (
-                      <span>Depart: {formatTime(visit.departure_time)}</span>
-                    )}
-                  </div>
-                )}
-
-                {visit.notes && (
-                  <div className="pending-notes">{visit.notes}</div>
-                )}
-
-                <div className="pending-actions">
-                  <button
-                    className="deny-btn"
-                    onClick={() => handleDecision(visit.id, 'denied')}
-                    disabled={processing === visit.id}
-                  >
-                    Deny
-                  </button>
-                  <button
-                    className="approve-btn"
-                    onClick={() => handleDecision(visit.id, 'confirmed')}
-                    disabled={processing === visit.id}
-                  >
-                    Approve
-                  </button>
-                </div>
+        {activeTab === 'pending' && (
+          <>
+            {pendingVisits.length === 0 ? (
+              <div className="no-pending">
+                <p>No pending proposals to review.</p>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="pending-list">
+                {pendingVisits.map(visit => (
+                  <div key={visit.id} className="pending-card">
+                    <div className="pending-header">
+                      <div className="submitter-info">
+                        <span className="submitter-name">
+                          {visit.visitors?.name || 'Unknown'}
+                        </span>
+                        <span className="submitter-email">
+                          {visit.profiles?.email}
+                        </span>
+                      </div>
+                      <span className="submitted-date">
+                        Submitted {format(parseISO(visit.created_at), 'MMM d')}
+                      </span>
+                    </div>
+
+                    <div className="pending-dates">
+                      <span className="date-range">
+                        {formatDate(visit.start_date)} - {formatDate(visit.end_date)}
+                      </span>
+                    </div>
+
+                    {(visit.arrival_time || visit.departure_time) && (
+                      <div className="pending-times">
+                        {visit.arrival_time && (
+                          <span>Arrive: {formatTime(visit.arrival_time)}</span>
+                        )}
+                        {visit.departure_time && (
+                          <span>Depart: {formatTime(visit.departure_time)}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {visit.notes && (
+                      <div className="pending-notes">{visit.notes}</div>
+                    )}
+
+                    <div className="pending-actions">
+                      <button
+                        className="deny-btn"
+                        onClick={() => handleDecision(visit.id, 'denied')}
+                        disabled={processing === visit.id}
+                      >
+                        Deny
+                      </button>
+                      <button
+                        className="approve-btn"
+                        onClick={() => handleDecision(visit.id, 'confirmed')}
+                        disabled={processing === visit.id}
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'all' && (
+          <>
+            {allVisits.length === 0 ? (
+              <div className="no-pending">
+                <p>No confirmed or denied visits.</p>
+              </div>
+            ) : (
+              <div className="pending-list">
+                {allVisits.map(visit => {
+                  const badge = getStatusBadge(visit.status)
+                  return (
+                    <div key={visit.id} className="pending-card">
+                      <div className="pending-header">
+                        <div className="submitter-info">
+                          <span className="submitter-name">
+                            {visit.visitors?.name || 'Unknown'}
+                          </span>
+                          <span className={`status-badge ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pending-dates">
+                        <span className="date-range">
+                          {formatDate(visit.start_date)} - {formatDate(visit.end_date)}
+                        </span>
+                      </div>
+
+                      {(visit.arrival_time || visit.departure_time) && (
+                        <div className="pending-times">
+                          {visit.arrival_time && (
+                            <span>Arrive: {formatTime(visit.arrival_time)}</span>
+                          )}
+                          {visit.departure_time && (
+                            <span>Depart: {formatTime(visit.departure_time)}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {visit.notes && (
+                        <div className="pending-notes">{visit.notes}</div>
+                      )}
+
+                      <div className="pending-actions">
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDelete(visit.id)}
+                          disabled={processing === visit.id}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
