@@ -18,14 +18,14 @@ import {
 import './App.css'
 
 const VISITOR_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
+  '#5b8fb9', // Mountain Blue
+  '#6b9b6b', // Pine
+  '#c4854a', // Sunset
+  '#b87878', // Fireweed
+  '#8878a8', // Twilight
+  '#5b9b9b', // Glacier
+  '#c47868', // Coral
+  '#8b9b6b', // Olive
 ]
 
 function AppContent() {

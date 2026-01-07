@@ -1,7 +1,8 @@
 .my-visits-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(20, 31, 43, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,50 +11,57 @@
 }
 
 .my-visits-modal {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
+  background: var(--cream);
+  border-radius: 20px;
+  padding: 2.5rem;
   width: 100%;
   max-width: 550px;
   position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 80px rgba(30, 45, 61, 0.25);
   max-height: 80vh;
   overflow-y: auto;
 }
 
 .my-visits-close {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 1.25rem;
+  right: 1.25rem;
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #64748b;
+  color: var(--slate-light);
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  transition: color 0.2s;
 }
 
 .my-visits-close:hover {
-  color: #334155;
+  color: var(--slate);
 }
 
 .my-visits-modal h2 {
   margin: 0 0 0.5rem;
-  color: #1e293b;
-  font-size: 1.5rem;
+  font-family: 'DM Serif Display', serif;
+  color: var(--midnight);
+  font-size: 1.75rem;
+  font-weight: 400;
 }
 
 .my-visits-subtitle {
-  margin: 0 0 1.5rem;
-  color: #64748b;
-  font-size: 0.875rem;
+  margin: 0 0 2rem;
+  color: var(--slate-light);
+  font-size: 0.9rem;
 }
 
 .no-visits {
   text-align: center;
-  padding: 2rem;
-  color: #64748b;
+  padding: 2.5rem 1.5rem;
+  color: var(--slate-light);
+}
+
+.no-visits p {
+  margin: 0;
 }
 
 .visits-list {
@@ -63,68 +71,79 @@
 }
 
 .visit-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem;
-  background: #f8fafc;
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border-left: 4px solid var(--amber);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease;
+}
+
+.visit-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .visit-card.confirmed {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-left-color: var(--sage);
 }
 
 .visit-card.denied {
-  border-color: #fecaca;
-  background: #fef2f2;
-  opacity: 0.8;
+  border-left-color: var(--visitor-rose);
+  opacity: 0.7;
 }
 
 .visit-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.03em;
 }
 
 .status-pending {
-  background: #fef3c7;
+  background: #fef6e8;
   color: #92400e;
 }
 
 .status-confirmed {
-  background: #d1fae5;
-  color: #065f46;
+  background: #e8f5e8;
+  color: #1a6b1a;
 }
 
 .status-denied {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #fef0f0;
+  color: #8a3a3a;
 }
 
 .cancel-btn {
-  background: none;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
+  background: transparent;
+  border: 1.5px solid #f0d0d0;
+  color: var(--visitor-rose);
+  padding: 0.35rem 0.875rem;
+  border-radius: 6px;
   font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
 .cancel-btn:hover {
-  background: #fef2f2;
+  background: #fef8f8;
+  border-color: var(--visitor-rose);
+}
+
+.cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .visit-dates {
@@ -133,21 +152,44 @@
 
 .date-range {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--midnight);
+  font-size: 0.95rem;
 }
 
 .visit-times {
   display: flex;
-  gap: 1rem;
-  font-size: 0.875rem;
-  color: #64748b;
+  gap: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--slate-light);
   margin-bottom: 0.5rem;
 }
 
 .visit-notes {
-  font-size: 0.875rem;
-  color: #64748b;
+  font-size: 0.85rem;
+  color: var(--slate-light);
   font-style: italic;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--cream-dark);
+}
+
+@media (max-width: 500px) {
+  .my-visits-modal {
+    padding: 1.75rem;
+    border-radius: 16px;
+  }
+
+  .my-visits-modal h2 {
+    font-size: 1.5rem;
+  }
+
+  .visit-card {
+    padding: 1rem;
+  }
+
+  .visit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
 }
