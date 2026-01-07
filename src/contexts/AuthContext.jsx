@@ -16,18 +16,51 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Check for stored session on mount
-    const storedSession = localStorage.getItem('supabase_session')
-    if (storedSession) {
+    async function restoreSession() {
+      const storedSession = localStorage.getItem('supabase_session')
+      if (!storedSession) return
+
       try {
         const session = JSON.parse(storedSession)
-        if (session.user && session.access_token) {
-          setUser(session.user)
-          fetchProfile(session.user.id, session.access_token)
+        if (!session.user || !session.refresh_token) {
+          localStorage.removeItem('supabase_session')
+          return
         }
+
+        // Always refresh the token on mount to ensure it's valid
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        })
+
+        const data = await res.json()
+
+        if (data.error || !data.access_token) {
+          // Refresh failed - session is invalid, clear it
+          localStorage.removeItem('supabase_session')
+          return
+        }
+
+        // Update stored session with new tokens
+        const newSession = {
+          user: data.user,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        }
+        localStorage.setItem('supabase_session', JSON.stringify(newSession))
+
+        setUser(data.user)
+        await fetchProfile(data.user.id, data.access_token)
       } catch (e) {
         localStorage.removeItem('supabase_session')
       }
     }
+
+    restoreSession()
   }, [])
 
   async function fetchProfile(userId, accessToken) {
