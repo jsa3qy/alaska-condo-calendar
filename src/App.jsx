@@ -44,14 +44,26 @@ function AppContent() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [user])  // Refetch when user logs in/out
 
   const fetchData = async () => {
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
     const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+    // Use user's auth token if logged in, otherwise anon key
+    const storedSession = localStorage.getItem('supabase_session')
+    let token = SUPABASE_KEY
+    if (storedSession) {
+      try {
+        token = JSON.parse(storedSession).access_token || SUPABASE_KEY
+      } catch (e) {
+        // Fall back to anon key
+      }
+    }
+
     const headers = {
       'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     }
 
