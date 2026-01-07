@@ -365,3 +365,25 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Create visit form styles */
+.create-visit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.create-subtitle {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+}
+
+.create-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  border: 1px solid #fecaca;
+}

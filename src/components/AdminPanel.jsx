@@ -10,6 +10,7 @@ function AdminPanel({ onClose, onUpdate }) {
   const { user, getAccessToken } = useAuth()
   const [pendingVisits, setPendingVisits] = useState([])
   const [allVisits, setAllVisits] = useState([])
+  const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
   const [activeTab, setActiveTab] = useState('pending')
@@ -22,6 +23,17 @@ function AdminPanel({ onClose, onUpdate }) {
     notes: '',
     status: ''
   })
+  // Create visit form state
+  const [createForm, setCreateForm] = useState({
+    user_id: '',
+    start_date: '',
+    end_date: '',
+    arrival_time: '',
+    departure_time: '',
+    notes: '',
+    status: 'pending'
+  })
+  const [createError, setCreateError] = useState(null)
 
   const getHeaders = () => {
     const token = getAccessToken()
@@ -56,6 +68,14 @@ function AdminPanel({ onClose, onUpdate }) {
       )
       const allData = await allRes.json()
       setAllVisits(allData || [])
+
+      // Fetch all users for the create form
+      const usersRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?select=id,email,name&order=name`,
+        { headers }
+      )
+      const usersData = await usersRes.json()
+      setAllUsers(usersData || [])
     } catch (err) {
       console.error('Error fetching visits:', err)
     } finally {
@@ -205,6 +225,93 @@ function AdminPanel({ onClose, onUpdate }) {
     }
   }
 
+  async function handleCreateVisit(e) {
+    e.preventDefault()
+    setCreateError(null)
+    setProcessing('create')
+
+    try {
+      const headers = getHeaders()
+      const selectedUser = allUsers.find(u => u.id === createForm.user_id)
+      if (!selectedUser) {
+        throw new Error('Please select a user')
+      }
+
+      let visitorId
+
+      // Find existing visitor record for this user
+      const existingRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/visitors?user_id=eq.${createForm.user_id}&select=id`,
+        { headers }
+      )
+      const existingVisitors = await existingRes.json()
+
+      if (existingVisitors && existingVisitors.length > 0) {
+        visitorId = existingVisitors[0].id
+      } else {
+        // Create new visitor linked to this user
+        const createRes = await fetch(`${SUPABASE_URL}/rest/v1/visitors`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            user_id: createForm.user_id,
+            name: selectedUser.name || selectedUser.email.split('@')[0],
+            description: 'Registered user'
+          })
+        })
+
+        if (!createRes.ok) {
+          const errData = await createRes.json()
+          throw new Error(errData.message || 'Failed to create visitor')
+        }
+
+        const newVisitors = await createRes.json()
+        visitorId = newVisitors[0].id
+      }
+
+      // Create the visit
+      const visitRes = await fetch(`${SUPABASE_URL}/rest/v1/visits`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          visitor_id: visitorId,
+          submitted_by: createForm.user_id,
+          start_date: createForm.start_date,
+          end_date: createForm.end_date,
+          arrival_time: createForm.arrival_time || null,
+          departure_time: createForm.departure_time || null,
+          notes: createForm.notes || null,
+          status: createForm.status,
+          reviewed_at: createForm.status !== 'pending' ? new Date().toISOString() : null,
+          reviewed_by: createForm.status !== 'pending' ? user.id : null
+        })
+      })
+
+      if (!visitRes.ok) {
+        const errData = await visitRes.json()
+        throw new Error(errData.message || 'Failed to create visit')
+      }
+
+      // Reset form and refresh
+      setCreateForm({
+        user_id: '',
+        start_date: '',
+        end_date: '',
+        arrival_time: '',
+        departure_time: '',
+        notes: '',
+        status: 'pending'
+      })
+      fetchVisits()
+      onUpdate?.()
+    } catch (err) {
+      console.error('Error creating visit:', err)
+      setCreateError(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   const formatDate = (dateStr) => format(parseISO(dateStr), 'MMM d, yyyy')
   const formatTime = (timeStr) => {
     if (!timeStr) return null
@@ -341,6 +448,12 @@ function AdminPanel({ onClose, onUpdate }) {
             onClick={() => setActiveTab('all')}
           >
             All Visits ({allVisits.length})
+          </button>
+          <button
+            className={`admin-tab ${activeTab === 'create' ? 'active' : ''}`}
+            onClick={() => setActiveTab('create')}
+          >
+            Create Visit
           </button>
         </div>
 
@@ -492,6 +605,104 @@ function AdminPanel({ onClose, onUpdate }) {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'create' && (
+          <div className="create-visit-form">
+            <p className="create-subtitle">Create a visit on behalf of an existing user</p>
+
+            <form onSubmit={handleCreateVisit}>
+              <div className="edit-field">
+                <label>User *</label>
+                <select
+                  value={createForm.user_id}
+                  onChange={(e) => setCreateForm({ ...createForm, user_id: e.target.value })}
+                  required
+                >
+                  <option value="">Select a user...</option>
+                  {allUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email.split('@')[0]} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="edit-row">
+                <div className="edit-field">
+                  <label>Start Date *</label>
+                  <input
+                    type="date"
+                    value={createForm.start_date}
+                    onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="edit-field">
+                  <label>End Date *</label>
+                  <input
+                    type="date"
+                    value={createForm.end_date}
+                    onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })}
+                    min={createForm.start_date}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="edit-row">
+                <div className="edit-field">
+                  <label>Arrival Time</label>
+                  <input
+                    type="time"
+                    value={createForm.arrival_time}
+                    onChange={(e) => setCreateForm({ ...createForm, arrival_time: e.target.value })}
+                  />
+                </div>
+                <div className="edit-field">
+                  <label>Departure Time</label>
+                  <input
+                    type="time"
+                    value={createForm.departure_time}
+                    onChange={(e) => setCreateForm({ ...createForm, departure_time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="edit-field">
+                <label>Status</label>
+                <select
+                  value={createForm.status}
+                  onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                </select>
+              </div>
+
+              <div className="edit-field">
+                <label>Notes</label>
+                <textarea
+                  value={createForm.notes}
+                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                  rows={2}
+                  placeholder="Any additional details..."
+                />
+              </div>
+
+              {createError && <div className="create-error">{createError}</div>}
+
+              <div className="edit-actions">
+                <button
+                  type="submit"
+                  className="save-btn"
+                  disabled={processing === 'create'}
+                >
+                  {processing === 'create' ? 'Creating...' : 'Create Visit'}
+                </button>
+              </div>
+            </form>
+          </div>
         )}
       </div>
     </div>
