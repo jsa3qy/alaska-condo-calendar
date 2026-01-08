@@ -1,16 +1,43 @@
-# React + Vite
+# Alaska Condo Calendar
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A visit reservation system for managing guest stays at a shared property. Users can propose visit dates, and admins can review, approve, or deny requests.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Calendar View** - Interactive monthly calendar showing all confirmed visits
+- **Visit Proposals** - Users can propose dates with optional arrival/departure times and notes
+- **My Visits** - Track submitted proposals and their status
+- **Admin Panel** - Review pending visits, approve/deny requests, create visits on behalf of users
+- **Authentication** - Email/password sign up and sign in
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19 + Vite
+- Supabase (PostgreSQL, Auth, Row-Level Security)
+- CSS with Nordic Cabin Modernism theme
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Clone the repository
+2. Copy `.env.example` to `.env` and fill in your Supabase credentials:
+   ```
+   VITE_SUPABASE_URL=your-project-url
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+3. Run the schema in `supabase-schema.sql` against your Supabase database
+4. Install dependencies and start:
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+## How Visits Work
+
+1. **User proposes a visit** - Submits dates, times, and notes
+2. **Visit is pending** - Appears on calendar with dashed border
+3. **Admin reviews** - Approves or denies the request
+4. **Confirmed visits** - Appear on calendar with solid styling
+
+## Deployment
+
+Configured for GitHub Pages. Build with `npm run build`.
