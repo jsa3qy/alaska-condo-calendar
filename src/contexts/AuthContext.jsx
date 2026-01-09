@@ -12,18 +12,22 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Check for stored session on mount
     async function restoreSession() {
       const storedSession = localStorage.getItem('supabase_session')
-      if (!storedSession) return
+      if (!storedSession) {
+        setLoading(false)
+        return
+      }
 
       try {
         const session = JSON.parse(storedSession)
         if (!session.user || !session.refresh_token) {
           localStorage.removeItem('supabase_session')
+          setLoading(false)
           return
         }
 
@@ -42,6 +46,7 @@ export function AuthProvider({ children }) {
         if (data.error || !data.access_token) {
           // Refresh failed - session is invalid, clear it
           localStorage.removeItem('supabase_session')
+          setLoading(false)
           return
         }
 
@@ -55,8 +60,10 @@ export function AuthProvider({ children }) {
 
         setUser(data.user)
         await fetchProfile(data.user.id, data.access_token)
+        setLoading(false)
       } catch (e) {
         localStorage.removeItem('supabase_session')
+        setLoading(false)
       }
     }
 

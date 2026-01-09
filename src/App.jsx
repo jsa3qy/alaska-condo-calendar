@@ -43,8 +43,11 @@ function AppContent() {
   const [showAdmin, setShowAdmin] = useState(false)
 
   useEffect(() => {
-    fetchData()
-  }, [user])  // Refetch when user logs in/out
+    // Wait for auth to finish loading before fetching data
+    if (!authLoading) {
+      fetchData()
+    }
+  }, [user, authLoading])  // Refetch when user logs in/out or auth finishes loading
 
   const fetchData = async () => {
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
@@ -139,7 +142,7 @@ function AppContent() {
     return visitors.filter(v => visitorIdsInView.has(v.id))
   }, [visitors, visits, currentMonth])
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="app">
         <div className="loading">Loading calendar...</div>
