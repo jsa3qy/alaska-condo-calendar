@@ -233,15 +233,22 @@ export function AuthProvider({ children }) {
     return null
   }
 
+  async function updateOwnerStatus(status) {
+    // status should be 'in_town_indefinitely', 'out_of_state_indefinitely', or null
+    return updateProfile({ owner_status: status })
+  }
+
   const value = {
     user,
     profile,
     loading,
     isAdmin: profile?.is_admin ?? false,
+    ownerStatus: profile?.owner_status ?? null,
     signUp,
     signIn,
     signOut,
     updateProfile,
+    updateOwnerStatus,
     getAccessToken,
     refreshProfile: () => {
       const token = getAccessToken()

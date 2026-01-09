@@ -9,6 +9,8 @@ CREATE TABLE profiles (
   email TEXT NOT NULL,
   name TEXT,
   is_admin BOOLEAN DEFAULT false,
+  owner_status TEXT,  -- 'in_town_indefinitely', 'out_of_state_indefinitely', or NULL
+  owner_status_until DATE,  -- optional end date for "in town" status
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -139,3 +141,12 @@ CREATE INDEX idx_visitors_user_id ON visitors(user_id);
 -- MAKE YOURSELF AN ADMIN (run after signing up)
 -- ============================================
 -- UPDATE profiles SET is_admin = true WHERE email = 'your-email@example.com';
+
+-- ============================================
+-- OWNER STATUS (for admins/owners to show availability)
+-- ============================================
+-- Run this migration if you already have the profiles table:
+-- ALTER TABLE profiles ADD COLUMN owner_status TEXT;
+-- ALTER TABLE profiles ADD COLUMN owner_status_until DATE;
+-- Values for owner_status: 'in_town_indefinitely', 'out_of_state_indefinitely', or NULL
+-- owner_status_until: optional end date for "in town" status

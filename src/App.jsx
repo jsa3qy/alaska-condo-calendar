@@ -6,6 +6,7 @@ import Auth from './components/Auth'
 import ProposalForm from './components/ProposalForm'
 import MyVisits from './components/MyVisits'
 import AdminPanel from './components/AdminPanel'
+import OwnerStatusPanel from './components/OwnerStatusPanel'
 import {
   startOfMonth,
   endOfMonth,
@@ -32,6 +33,7 @@ function AppContent() {
   const { user, profile, isAdmin, loading: authLoading, signOut } = useAuth()
   const [visits, setVisits] = useState([])
   const [visitors, setVisitors] = useState([])
+  const [admins, setAdmins] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -101,6 +103,16 @@ function AppContent() {
       })
 
       setVisits(visitsWithColors)
+
+      // Fetch admin profiles (owners)
+      const adminsRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?is_admin=eq.true&select=id,name,email,owner_status,owner_status_until`,
+        { headers }
+      )
+      if (adminsRes.ok) {
+        const adminsData = await adminsRes.json()
+        setAdmins(adminsData || [])
+      }
     } catch (err) {
       console.error('Error fetching data:', err)
       setError(err.message)
@@ -210,6 +222,8 @@ function AppContent() {
       </header>
 
       <main>
+        <OwnerStatusPanel admins={admins} visits={visits} onStatusChange={fetchData} />
+
         <Calendar visits={visits.filter(v => v.status !== 'denied')} currentMonth={currentMonth} onMonthChange={setCurrentMonth} />
 
         <div className="legend-section">
